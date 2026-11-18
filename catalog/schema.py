@@ -42,6 +42,39 @@ _TABLES = (
         start_position INTEGER NOT NULL CHECK (start_position >= 0),
         stop_position INTEGER NOT NULL CHECK (stop_position > start_position)
     )''',
+    '''CREATE TABLE IF NOT EXISTS issued_handoffs (
+        issue_id INTEGER PRIMARY KEY,
+        ticket_id INTEGER NOT NULL REFERENCES review_tickets (ticket_id),
+        target_revision INTEGER NOT NULL REFERENCES revisions (revision_id),
+        payload BLOB NOT NULL
+    )''',
+    '''CREATE TABLE IF NOT EXISTS issued_rows (
+        issue_id INTEGER NOT NULL REFERENCES issued_handoffs (issue_id),
+        target_position INTEGER NOT NULL CHECK (target_position >= 0),
+        marked_position INTEGER NOT NULL CHECK (marked_position >= 0),
+        batch_id TEXT NOT NULL,
+        source_position INTEGER NOT NULL,
+        reading TEXT,
+        PRIMARY KEY (issue_id, target_position),
+        FOREIGN KEY (batch_id, source_position)
+            REFERENCES source_rows (batch_id, source_position)
+    )''',
+    '''CREATE TABLE IF NOT EXISTS signoff_receipts (
+        cutoff INTEGER PRIMARY KEY,
+        receipt_id TEXT NOT NULL UNIQUE,
+        issue_id INTEGER NOT NULL REFERENCES issued_handoffs (issue_id)
+    )''',
+    '''CREATE TABLE IF NOT EXISTS signoff_entries (
+        cutoff INTEGER NOT NULL REFERENCES signoff_receipts (cutoff),
+        target_position INTEGER NOT NULL CHECK (target_position >= 0),
+        ticket_id INTEGER NOT NULL REFERENCES review_tickets (ticket_id),
+        marked_position INTEGER NOT NULL CHECK (marked_position >= 0),
+        predecessor TEXT,
+        decision TEXT NOT NULL CHECK (decision IN ('confirmed', 'pending')),
+        PRIMARY KEY (cutoff, target_position)
+    )''',
+    '''CREATE INDEX IF NOT EXISTS signoff_entries_by_selection
+        ON signoff_entries (ticket_id, marked_position, cutoff)''',
 )
 
 
